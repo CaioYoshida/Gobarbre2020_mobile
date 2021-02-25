@@ -14,6 +14,8 @@ import { Form } from '@unform/mobile';
 import { FormHandles } from '@unform/core';
 import * as Yup from 'yup';
 
+import { useAuth } from '../../hooks/useAuth';
+
 import getValidationErrors from '../../utils/getValidationErrors';
 
 import logoImg from '../../assets/logo.png';
@@ -38,44 +40,50 @@ interface SignInFormData {
 const SignIn: React.FC = () => {
   const formRef = useRef<FormHandles>(null);
   const passwordInputRef = useRef<TextInput>(null);
+
   const navigation = useNavigation();
 
-  const handleSignIn = useCallback(async (data: SignInFormData) => {
-    try {
-      if (formRef.current) {
-        formRef.current.setErrors({});
-      }
+  const { signIn } = useAuth();
 
-      const schema = Yup.object().shape({
-        email: Yup.string()
-          .email('Enter with a valid e-mail')
-          .required('E-mail is required'),
-        password: Yup.string().required('Enter with your password'),
-      });
-
-      await schema.validate(data, {
-        abortEarly: false,
-      });
-
-      // await signIn({
-      //   email: data.email,
-      //   password: data.password,
-      // });
-    } catch (error) {
-      if (error instanceof Yup.ValidationError) {
-        const errors = getValidationErrors(error);
-
+  const handleSignIn = useCallback(
+    async (data: SignInFormData) => {
+      try {
         if (formRef.current) {
-          formRef.current.setErrors(errors);
+          formRef.current.setErrors({});
         }
-      } else {
-        Alert.alert(
-          'Authentication error',
-          'Login Failed. Check your credentials',
-        );
+
+        const schema = Yup.object().shape({
+          email: Yup.string()
+            .email('Enter with a valid e-mail')
+            .required('E-mail is required'),
+          password: Yup.string().required('Enter with your password'),
+        });
+
+        await schema.validate(data, {
+          abortEarly: false,
+        });
+
+        await signIn({
+          email: data.email,
+          password: data.password,
+        });
+      } catch (error) {
+        if (error instanceof Yup.ValidationError) {
+          const errors = getValidationErrors(error);
+
+          if (formRef.current) {
+            formRef.current.setErrors(errors);
+          }
+        } else {
+          Alert.alert(
+            'Authentication error',
+            'Login Failed. Check your credentials',
+          );
+        }
       }
-    }
-  }, []);
+    },
+    [signIn],
+  );
 
   const handleEnterButton = useCallback(() => {
     if (formRef.current) {
