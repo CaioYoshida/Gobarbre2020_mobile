@@ -13,6 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Form } from '@unform/mobile';
 import { FormHandles } from '@unform/core';
 import * as Yup from 'yup';
+import api from '../../services/api';
 
 import getValidationErrors from '../../utils/getValidationErrors';
 
@@ -40,42 +41,45 @@ const SignUp: React.FC = () => {
   const passwordInputRef = useRef<TextInput>(null);
   const navigation = useNavigation();
 
-  const handleSignUp = useCallback(async (data: SignUpFormData) => {
-    try {
-      if (formRef.current) {
-        formRef.current.setErrors({});
+  const handleSignUp = useCallback(
+    async (data: SignUpFormData) => {
+      try {
+        if (formRef.current) {
+          formRef.current.setErrors({});
+        }
+
+        const schema = Yup.object().shape({
+          name: Yup.string().required('Nome obrigatório'),
+          email: Yup.string()
+            .email('Digite e-mail válido')
+            .required('E-mail obrigatório'),
+          password: Yup.string().min(6, 'No mínimo 6 dígitos'),
+        });
+
+        await schema.validate(data, {
+          abortEarly: false,
+        });
+
+        await api.post('/users', data);
+
+        Alert.alert('Subscription acomplished', 'Now you are ready to logon!');
+
+        navigation.navigate('SignIn');
+      } catch (error) {
+        const errors = getValidationErrors(error);
+
+        if (formRef.current) {
+          formRef.current.setErrors(errors);
+        }
+
+        Alert.alert(
+          'Subscription failed',
+          'Something went wrong. Please try again!',
+        );
       }
-
-      const schema = Yup.object().shape({
-        name: Yup.string().required('Nome obrigatório'),
-        email: Yup.string()
-          .email('Digite e-mail válido')
-          .required('E-mail obrigatório'),
-        password: Yup.string().min(6, 'No mínimo 6 dígitos'),
-      });
-
-      await schema.validate(data, {
-        abortEarly: false,
-      });
-
-      // await api.post('/users', data);
-
-      // history.push('/');
-
-      Alert.alert('Subscription acomplished', 'Now you are ready to logon!');
-    } catch (error) {
-      const errors = getValidationErrors(error);
-
-      if (formRef.current) {
-        formRef.current.setErrors(errors);
-      }
-
-      Alert.alert(
-        'Subscription failed',
-        'Something went wrong. Please try again!',
-      );
-    }
-  }, []);
+    },
+    [navigation],
+  );
 
   const handleEnterButton = useCallback(() => {
     if (formRef.current) {
